@@ -225,9 +225,29 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             child: Column(
               children: [
                 if (result != null)
-                  Text('Result: $result')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Result:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      SelectableText(
+                        result!,
+                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: result!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Copied to clipboard!')),
+                          );
+                        },
+                        child: const Text("Copy Result"),
+                      ),
+                    ],
+                  )
                 else
                   const Text('Scan a code or pick from gallery'),
+
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: scanImageFromGallery,
