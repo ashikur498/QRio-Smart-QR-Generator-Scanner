@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +9,7 @@ import 'dart:io';
 import 'package:flutter/rendering.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'package:mobile_scanner/mobile_scanner.dart' as scanner;
+import 'package:flutter/services.dart';
 
 
 void main() {
@@ -45,36 +45,52 @@ class _HomeScreenState extends State<HomeScreen> {
     if (qrData == null || qrData!.isEmpty) return;
 
     var status = await Permission.storage.status;
-
     if (status.isDenied) {
       status = await Permission.storage.request();
     }
-
     if (status.isPermanentlyDenied) {
-      openAppSettings(); // Optionally show a dialog before this
+      openAppSettings();
       return;
     }
 
     if (status.isGranted) {
-      RenderRepaintBoundary boundary =
-      globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
+      try {
+        // Wait until the next frame is painted
+        await Future.delayed(Duration(milliseconds: 100));
+        await WidgetsBinding.instance.endOfFrame;
 
-      final result = await ImageGallerySaver.saveImage(pngBytes,
-          name: "qr_code_${DateTime.now().millisecondsSinceEpoch}");
+        RenderRepaintBoundary boundary =
+        globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        if (boundary.debugNeedsPaint) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(result['isSuccess']
+        ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+        ByteData? byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+        Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+        final result = await ImageGallerySaver.saveImage(
+          pngBytes,
+          name: "qr_code_${DateTime.now().millisecondsSinceEpoch}",
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['isSuccess'] == true
                 ? 'QR Code saved to gallery!'
-                : 'Failed to save QR Code.')),
-      );
+                : 'Failed to save QR Code.'),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving image: $e')),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Storage permission denied.')));
+        const SnackBar(content: Text('Storage permission denied.')),
+      );
     }
   }
 
@@ -127,8 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) => const QRScannerScreen()),
+                  MaterialPageRoute(builder: (context) => const QRScannerScreen()),
                 );
               },
               child: const Text("Scan QR Code"),
@@ -159,8 +174,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     final inputImage = InputImage.fromFile(File(pickedImage.path));
     final barcodeScanner = BarcodeScanner();
-    final List<Barcode> barcodes = await barcodeScanner.processImage(inputImage);
-
+    final List<Barcode> barcodes =
+    await barcodeScanner.processImage(inputImage);
 
     if (barcodes.isNotEmpty) {
       setState(() {
