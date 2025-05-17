@@ -44,17 +44,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveQrToGallery() async {
     if (qrData == null || qrData!.isEmpty) return;
 
-    RenderRepaintBoundary boundary =
-    globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-    ByteData? byteData =
-    await image.toByteData(format: ui.ImageByteFormat.png);
-    Uint8List pngBytes = byteData!.buffer.asUint8List();
+    var status = await Permission.storage.status;
 
-    var status = await Permission.storage.request();
+    if (status.isDenied) {
+      status = await Permission.storage.request();
+    }
+
+    if (status.isPermanentlyDenied) {
+      openAppSettings(); // Optionally show a dialog before this
+      return;
+    }
+
     if (status.isGranted) {
+      RenderRepaintBoundary boundary =
+      globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData =
+      await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
       final result = await ImageGallerySaver.saveImage(pngBytes,
           name: "qr_code_${DateTime.now().millisecondsSinceEpoch}");
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(result['isSuccess']
@@ -63,9 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permission denied')));
+          const SnackBar(content: Text('Storage permission denied.')));
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
