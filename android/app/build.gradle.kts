@@ -1,4 +1,5 @@
 import org.gradle.api.JavaVersion
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -8,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.appp"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -28,8 +29,8 @@ android {
         applicationId = "com.example.appp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -53,3 +54,8 @@ allprojects {
 flutter {
     source = "../.."
 }
+dependencies {
+    implementation("androidx.core:core:1.12.0")
+
+}
+
